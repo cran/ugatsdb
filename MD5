@@ -1,0 +1,17 @@
+e9adc141d61fe998a9f0602d95f938d4 *DESCRIPTION
+c7c583a3d6340314bc613ddd60d323ca *NAMESPACE
+1a4d1a369af0441844928b8548213f0b *R/accessdb.R
+69dff0dd29165caeffd9726f8959dddb *R/ugatsdb.R
+f29b9058fb4941c5916061b8d7d8147e *man/datasets.Rd
+2bcc6c3abbe4f3dd7a24a89060cad50a *man/datasources.Rd
+2d5390eb137ed400bb6e9d1143bfbdc7 *man/dot-IDvars.Rd
+91d130518d4d9b5746c320c7ee78aa8b *man/expand_date.Rd
+e2d0772d102a8db9b821a2c48d6be923 *man/get_data.Rd
+42fd3b298579db3ff422d7fe7414c2d4 *man/long2wide.Rd
+81a47c2873b2d4659063deef9c3a6052 *man/make_date.Rd
+dd5e7f628043f4f5694b5bb265a4300d *man/series.Rd
+7aa0211d10a6d0f03b6172816fd10981 *man/transpose_wide.Rd
+619de94afa0fa35e2be49e97d20c671d *man/ugatsdb.Rd
+748b2381af1aa8205036ed2bdbe4ae0a *man/ugatsdb_reconnect.Rd
+fb787fb9546ce6ae91881948d6af8aa1 *man/wide2excel.Rd
+9f726d50e3f325cde051d1d583e82c2f *man/wide2long.Rd
