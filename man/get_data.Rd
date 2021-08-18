@@ -27,25 +27,31 @@ year-quarters of the form \code{"YYYYQN"} or \code{"YYYY-QN"}, a numeric year \c
 
 \item{to}{same as \code{from}: to set the time period until which data is retrieved. For expressions that are not full "YYYY-MM-DD" dates, the last day of the period is chosen.}
 
-\item{labels}{logical. \code{TRUE} will also return variable labels along with the series codes.}
+\item{labels}{logical. \code{TRUE} will also return labels (series descriptions) along with the series codes.}
 
-\item{wide}{logical. \code{TRUE} calls \code{\link{long2wide}} with default settings on the result. \code{FALSE} returns the data in a long format without missing values (suitable for \code{ggplot2}).}
+\item{wide}{logical. \code{TRUE} calls \code{\link{long2wide}} on the result. \code{FALSE} returns the data in a long format without missing values (suitable for \code{ggplot2}).}
 
 \item{expand.date}{logical. \code{TRUE} will call \code{\link{expand_date}} on the result.}
 
-\item{ordered}{logical. \code{TRUE} orders the result by 'Date' and further by series (if \code{labels = TRUE}), maintaining the column-order of series in the dataset(s).
+\item{ordered}{logical. \code{TRUE} orders the result by 'Date' and, if \code{labels = TRUE}, by series, maintaining the column-order of series in the dataset(s).
 \code{FALSE} returns the result in a random order, to the benefit of faster query execution.}
 
 \item{return.query}{logical. \code{TRUE} will not query the database but instead return the constructed SQL query as a character string.}
 
-\item{\dots}{further arguments passed to \code{\link{long2wide}} (if \code{wide = TRUE}) or \code{\link{expand_date}} (if \code{expand.date = TRUE}), no conflicts between the two.}
+\item{\dots}{further arguments passed to \code{\link{long2wide}} (if \code{wide = TRUE}) or \code{\link{expand_date}} (if \code{expand.date = TRUE}), no conflicts between these two.}
+}
+\value{
+A \code{\link[data.table]{data.table}} with the result of the query.
 }
 \description{
-This is the main function of the package to retrieve data from the database. It constructs an SQL query which is sent to the database and returns the data as a \emph{data.table} in R.
+This is the main function of the package to retrieve data from the database. It constructs an SQL query which is sent to the database and returns the data as a \code{\link[data.table]{data.table}} in R.
 }
 \details{
 If \code{labels = FALSE}, the 'SERIES' table is not joined to the 'DATA' table, and \code{ordered = TRUE} will order datasets and series retrieved in alphabetic order.
 If \code{labels = TRUE} data is ordered by series and date within each dataset, preserving the order of columns in the dataset. If multiple datasets are received they are ordered alphabetically according to the 'DSID' column.
+
+It is possible query multiple series from multiple datasets e.g. \code{get_data(c("DSID1", "DSID2"), c("SERFROM1", "SERFROM2"))} etc., but care needs to be taken that the series queried do not occur in both datasets (see \code{\link{.IDvars}}, and check using \code{\link[=series]{series(c("DSID1", "DSID2"))}}).
+Series from datasets at different frequencies can be queried, but, if \code{wide = TRUE}, this will result in missing values for all but the first observations per period in the lower frequency series.
 }
 \examples{
 \donttest{
@@ -61,6 +67,9 @@ get_data("BOU_MMI", from = 2000, wide = FALSE) \%>\% long2wide \%>\% expand_date
 
 # Getting a single series
 get_data("BOU_MMI", "M2", 2000)
+
+# Getting High-Frequency activity indicators from BoU and Revenue & Expense from MoFPED
+get_data(c("BOU_MMI", "MOF_TOT", "WB_WDI"), c("CIEA", "BTI", "REV_GRA", "EXP_LEN"))
 
 # Getting daily interest rates and plotting
 library(xts)   # Time series class

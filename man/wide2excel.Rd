@@ -4,26 +4,26 @@
 \alias{wide2excel}
 \title{Export Wide Data to Excel}
 \usage{
-wide2excel(data, ..., transpose = FALSE, transpose.date.format = "\%m/\%d/\%Y")
+wide2excel(data, ..., transpose = FALSE, transpose.date.format = "\%d/\%m/\%Y")
 }
 \arguments{
 \item{data}{a wide dataset from \code{\link{get_data}} or reshaped to a wide format with \code{\link{long2wide}}.}
 
-\item{\dots}{further arguments to \code{\link{write_xlsx}}. As a minimum a path needs to be supplied that ends with the name of the excel file. See Examples.}
+\item{\dots}{further arguments to \code{\link[writexl]{write_xlsx}}. As a minimum a path needs to be supplied that ends with the name of the Excel file. See Examples.}
 
-\item{transpose}{logical. If \code{TRUE}, the result is returned in a row-oriented excel format. The default is column oriented (same as the dataset in R).}
+\item{transpose}{logical. If \code{TRUE}, the result is returned in a row-oriented Excel format. The default is column oriented (same as the dataset in R).}
 
 \item{transpose.date.format}{argument passed to \code{\link{transpose_wide}}, setting the format of date columns when data is transposed.}
 }
 \description{
-This function exports a wide format dataset to a column- (default) or row-oriented excel format.
+This function exports a wide format dataset to a column- (default) or row-oriented Excel format.
 }
 \examples{
 \dontrun{
 # Getting macroeconomic indicators from Bank of Uganda in fiscal years
 data <- get_data("BOU_MMI_FY", from = "2000/01")
 
-# Saving to different excel formats
+# Saving to different Excel formats
 wide2excel(data, "BOU_MMI_FY.xlsx")
 wide2excel(data, "BOU_MMI_FY.xlsx", transpose = TRUE)
 
@@ -33,5 +33,5 @@ wide2excel(data, "C:/Users/.../BOU_MMI_FY.xlsx")
 
 }
 \seealso{
-\code{\link{transpose_wide}}, \code{\link{write_xlsx}}, \code{\link{transpose}}, \code{\link{ugatsdb}}
+\code{\link{transpose_wide}}, \code{\link[writexl]{write_xlsx}}, \code{\link{ugatsdb}}
 }

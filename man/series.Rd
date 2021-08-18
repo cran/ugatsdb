@@ -16,12 +16,19 @@ datasets in which the series are recorded. \code{FALSE} only returns the raw 'SE
 
 \item{return.query}{logical. \code{TRUE} will not query the database but instead return the constructed SQL query as a character string.}
 }
+\value{
+A \code{\link[data.table]{data.table}} with information about the available time series in the database.
+}
 \description{
-This function pulls a table called 'SERIES' from the database, and returns it as a \emph{data.table} in R.
-The 'SERIES' table gives information about all of the time series in the database.
+This function pulls and returns a table called 'SERIES' from the database.
 }
 \details{
-If \code{dataset.info = FALSE}, the 'DATASET' table is not joined to the 'SERIES' table, and \code{ordered = TRUE} only orders the series within each dataset to maintain the column order of variable in the dataset.
+The 'SERIES' table gives information about all of the time series in the database. Each series is given a code which is however not unique across datasets (see \code{\link{.IDvars}}).
+Each series also has a label describing the series. Further information recorded are the minimum and maximum time coverage, and (optionally) a separate series source and url.
+By default \code{dataset.info = TRUE} and the frequency of the data, the date when the dataset containing the series was last updated, the dataset and data source are added to the
+'SERIES' table from the 'DATASET' table.
+
+If \code{dataset.info = FALSE}, the 'DATASET' table is not joined to the 'SERIES' table, and \code{ordered = TRUE} only orders the series within each dataset to maintain the column order of series in the source data.
 In that case the datasets are returned in alphabetic order of 'DSID', not the order in which they were entered into the 'DATASET' table.
 }
 \examples{

@@ -9,9 +9,14 @@ datasources(ordered = TRUE)
 \arguments{
 \item{ordered}{logical. \code{TRUE} orders the result in the order data was entered into the database, while \code{FALSE} returns the result in a random order, to the benefit of faster query execution.}
 }
+\value{
+A \code{\link[data.table]{data.table}} with information about the sources of data in the database.
+}
 \description{
-This function pulls a table called 'DATASOURCE' from the database, and returns it as a \emph{data.table} in R.
-The 'DATASOURCE' table gives information about the various sources / providers of data in this database.
+This function pulls and returns a table called 'DATASOURCE' from the database.
+}
+\details{
+The 'DATASOURCE' table gives information about the various sources / providers of data in this database, including the source website, the number of datasets available from the source, a description of the source and the way data is accessed from the source.
 }
 \examples{
 \donttest{

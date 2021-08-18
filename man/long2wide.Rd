@@ -6,16 +6,16 @@
 \usage{
 long2wide(
   data,
-  id_cols = .Tvars[.Tvars \%in\% names(data)],
+  id_cols = intersect(.Tvars, names(data)),
   names_from = "Series",
   values_from = "Value",
-  labels_from = if ("Label" \%in\% names(data)) "Label" else NULL,
+  labels_from = if (any(names(data) == "Label")) "Label" else NULL,
   expand.date = FALSE,
   ...
 )
 }
 \arguments{
-\item{data}{raw data from the API: A long format data frame where all values are stacked in the 'Value' column.}
+\item{data}{raw data from the API: A long format data frame where all values are stacked in a value column.}
 
 \item{id_cols}{character. Temporal identifiers of the data. By default all variables in \code{\link{.Tvars}} are selected.}
 
@@ -27,7 +27,10 @@ long2wide(
 
 \item{expand.date}{logical. \code{TRUE} will call \code{\link{expand_date}} on the data after reshaping.}
 
-\item{\dots}{further arguments passed to \code{\link{dcast.data.table}} or \code{\link{expand_date}}, no conflicts between the two.}
+\item{\dots}{further arguments passed to \code{\link[data.table]{dcast}} or \code{\link{expand_date}}, no conflicts between these two.}
+}
+\value{
+A \code{\link[data.table]{data.table}} with the reshaped data.
 }
 \description{
 This function automatically reshapes long (stacked) raw data from the API (\code{\link[=get_data]{get_data(..., wide = FALSE)}}) to a wide format where each variable has its own column.

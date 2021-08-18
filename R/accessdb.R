@@ -43,15 +43,17 @@
 #' @export ugatsdb_reconnect
 
 ugatsdb_reconnect <- function() {
-  if(length(con)) dbDisconnect(con)
-  assignInMyNamespace("con", .connect())
+  if(length(.ugatsdb_con)) tryCatch(dbDisconnect(.ugatsdb_con), error = function(e) cat(""))
+  assignInMyNamespace(".ugatsdb_con", .connect())
 }
 
 #' Retrieve Data Sources Table
 #'
-#' This function pulls a table called 'DATASOURCE' from the database, and returns it as a \emph{data.table} in R.
-#' The 'DATASOURCE' table gives information about the various sources / providers of data in this database.
+#' This function pulls and returns a table called 'DATASOURCE' from the database.
+#'
+#' The 'DATASOURCE' table gives information about the various sources / providers of data in this database, including the source website, the number of datasets available from the source, a description of the source and the way data is accessed from the source.
 #' @param ordered logical. \code{TRUE} orders the result in the order data was entered into the database, while \code{FALSE} returns the result in a random order, to the benefit of faster query execution.
+#' @return A \code{\link[data.table]{data.table}} with information about the sources of data in the database.
 #' @examples \donttest{
 #' datasources()
 #' }
@@ -61,7 +63,8 @@ ugatsdb_reconnect <- function() {
 
 datasources <- function(ordered = TRUE) {
   query <- "SELECT Source, Source_Url, NDatasets, Description, Access FROM DATASOURCE"
-  res <- dbGetQuery(con, if(ordered) paste(query, "ORDER BY SRC_Order") else query)
+  if(tryCatch(!dbIsValid(.ugatsdb_con), error = function(e) TRUE)) ugatsdb_reconnect()
+  res <- dbGetQuery(.ugatsdb_con, if(ordered) paste(query, "ORDER BY SRC_Order") else query)
   if(!fnrow(res)) stop("Query resulted in empty dataset. This means something is wrong with your internet connection, the connection to the database (try calling ugatsdb_reconnect()) or with the database itself.")
   setDT(res)
   # oldClass(res) <- c("data.table", "data.frame")
@@ -70,9 +73,11 @@ datasources <- function(ordered = TRUE) {
 
 #' Retrieve Datasets Table
 #'
-#' This function pulls a table called 'DATASET' from the database, and returns it as a \emph{data.table} in R.
-#' The 'DATASET' table gives information about the different datasets read into the database from various sources.
+#' This function pulls and return a table called 'DATASET' from the database.
+#'
+#' The 'DATASET' table gives information about the different datasets read into the database from various sources. It provides a unique id for each dataset, the frequency of data, the minimum and maximum time coverage, when the dataset was last updated, a description, the source (matching the 'Source' column in the 'DATASOURCE' table), and an (optional) url providing direct access to the raw data.
 #' @param ordered logical. \code{TRUE} orders the result in the order data was entered into the database, while \code{FALSE} returns the result in a random order, to the benefit of faster query execution.
+#' @return A \code{\link[data.table]{data.table}} with information about the available datasets in the database.
 #' @examples \donttest{
 #' datasets()
 #' }
@@ -82,7 +87,8 @@ datasources <- function(ordered = TRUE) {
 
 datasets <- function(ordered = TRUE) {
   query <- "SELECT DSID, Dataset, Frequency, DS_From, DS_To, Updated, Description, Source, DS_Url FROM DATASET"
-  res <- dbGetQuery(con, if(ordered) paste(query, "ORDER BY DS_Order") else query)
+  if(tryCatch(!dbIsValid(.ugatsdb_con), error = function(e) TRUE)) ugatsdb_reconnect()
+  res <- dbGetQuery(.ugatsdb_con, if(ordered) paste(query, "ORDER BY DS_Order") else query)
   if(!fnrow(res)) stop("Query resulted in empty dataset. This means something is wrong with your internet connection, the connection to the database (try calling ugatsdb_reconnect()) or with the database itself.")
   res$DS_From <- as.Date(res$DS_From)
   res$DS_To <- as.Date(res$DS_To)
@@ -94,8 +100,7 @@ datasets <- function(ordered = TRUE) {
 
 #' Retrieve Series Table
 #'
-#' This function pulls a table called 'SERIES' from the database, and returns it as a \emph{data.table} in R.
-#' The 'SERIES' table gives information about all of the time series in the database.
+#' This function pulls and returns a table called 'SERIES' from the database.
 #'
 #' @param dsid character. (Optional) id's of datasets matching the 'DSID' column of the 'DATASET' table (retrieved using \code{\link[=datasets]{datasets()}}) for which series information is to be returned.
 #' @param dataset.info logical. \code{TRUE} returns additional information from the 'DATASET' table about the
@@ -103,9 +108,15 @@ datasets <- function(ordered = TRUE) {
 #' @param ordered logical. \code{TRUE} orders the result in the order data was entered into the database, while \code{FALSE} returns the result in a random order, to the benefit of faster query execution.
 #' @param return.query logical. \code{TRUE} will not query the database but instead return the constructed SQL query as a character string.
 #'
-#' @details If \code{dataset.info = FALSE}, the 'DATASET' table is not joined to the 'SERIES' table, and \code{ordered = TRUE} only orders the series within each dataset to maintain the column order of variable in the dataset.
+#' @details The 'SERIES' table gives information about all of the time series in the database. Each series is given a code which is however not unique across datasets (see \code{\link{.IDvars}}).
+#' Each series also has a label describing the series. Further information recorded are the minimum and maximum time coverage, and (optionally) a separate series source and url.
+#' By default \code{dataset.info = TRUE} and the frequency of the data, the date when the dataset containing the series was last updated, the dataset and data source are added to the
+#' 'SERIES' table from the 'DATASET' table.
+#'
+#' If \code{dataset.info = FALSE}, the 'DATASET' table is not joined to the 'SERIES' table, and \code{ordered = TRUE} only orders the series within each dataset to maintain the column order of series in the source data.
 #' In that case the datasets are returned in alphabetic order of 'DSID', not the order in which they were entered into the 'DATASET' table.
 #'
+#' @return A \code{\link[data.table]{data.table}} with information about the available time series in the database.
 #' @examples \donttest{
 #' # By default returns all series with additional information
 #' series()
@@ -140,7 +151,8 @@ series <- function(dsid = NULL, dataset.info = TRUE, ordered = TRUE, return.quer
     }
   }
   if(return.query) return(query)
-  res <- dbGetQuery(con, query)
+  if(tryCatch(!dbIsValid(.ugatsdb_con), error = function(e) TRUE)) ugatsdb_reconnect()
+  res <- dbGetQuery(.ugatsdb_con, query)
   if(!fnrow(res)) stop("Query resulted in empty dataset. Please make sure the DSID esists by checking against the datasets() table. Alternatively check your connection to the database.")
 
   res$S_From <- as.Date(res$S_From)
@@ -170,7 +182,7 @@ series <- function(dsid = NULL, dataset.info = TRUE, ordered = TRUE, return.quer
 # #' @export times
 #
 # times <- function(as.factor = TRUE, ordered = TRUE) {
-#   res <- dbGetQuery(con, if(ordered) "SELECT * FROM TIME ORDER BY Date" else "SELECT * FROM TIME")
+#   res <- dbGetQuery(.ugatsdb_con, if(ordered) "SELECT * FROM TIME ORDER BY Date" else "SELECT * FROM TIME")
 #   oldClass(res) <- c("data.table", "data.frame")
 #   lab <- c('Date', 'Year', 'Quarter', 'Fiscal Year (July - June)', 'Quarter of Fiscal Year', 'Month', 'Day')
 #   res$Date <- as.Date(res$Date)
@@ -188,15 +200,17 @@ series <- function(dsid = NULL, dataset.info = TRUE, ordered = TRUE, return.quer
 #'
 #' This function expands a date column and generates additional temporal identifiers from it (such as the year, month, quarter, fiscal year etc.).
 #'
-#' @param x either a vector of class 'Date', or coercible to date using \code{\link{as.Date}}, or a data frame / list with a date variable in the first column.
-#' @param gen character. A vector of identifiers to generate from \code{x}. The possible identifiers are found in \code{\link{.Tvars}}. The default setting is to generate all identifiers apart from 'Day'.
-#' @param origin character / Date. Passed to \code{\link{as.Date}}: for converting numeric \code{x} to date.
+#' @param x either a vector of class 'Date', or coercible to date using \code{\link[base]{as.Date}}, or a data frame / list with a date variable in the first column.
+#' @param gen character. A vector of identifiers to generate from \code{x}. The possible identifiers are found in \code{\link{.Tvars}}. The default setting is to generate all identifiers apart from "Day".
+#' @param origin character / Date. Passed to \code{\link[base]{as.Date}}: for converting numeric \code{x} to date.
 #' @param keep.date logical. \code{TRUE} will keep the date variable in the first column of the resulting dataset, \code{FALSE} will remove the date variable in favor of the generated identifiers.
 #' @param remove.missing.date logical. \code{TRUE} will remove missing values in \code{x}. If \code{x} is a dataset, the corresponding rows will be removed.
 #' @param sort logical. \code{TRUE} will sort the data by the date column.
 #' @param as.factor \code{TRUE} will generate quarters, fiscal years and months ('Quarter', 'FY', 'QFY', 'Month') as factor variables. It is also possible to use \code{as.factor = "ordered"} to generate ordered factors.
 #' \code{FALSE} will generate fiscal years as character and quarters and months as integer variables.
 #' @param \dots not used.
+#'
+#' @return A \code{\link[data.table]{data.table}} containing the computed identifiers as columns. See Examples.
 #'
 #' @examples
 #' # First a basic example
@@ -251,21 +265,21 @@ expand_date <- function(x, gen = c("Year", "Quarter", "FY", "QFY", "Month"), ori
   if(!inherits(x, "Date"))
     x <- if(is.numeric(x)) as.Date(x, origin) else as.Date(x)
   if(remove.missing.date && anyNA(x)) {
-    na <- is.na(x)
-    x <- x[!na]
-    if(lxl) l <- ss(l, !na)
+    nna <- which(!is.na(x))
+    x <- x[nna]
+    if(lxl) l <- ss(l, nna)
   }
   if(!lxl && sort && is.unsorted(x)) x <- sort(x)
-  xc <- as.character(x)
-  y <- as.integer(substr(xc, 1L, 4L))
-  m <- as.integer(substr(xc, 6L, 7L))
+  xp <- as.POSIXlt(x)
+  y <- xp$year + 1900L
+  m <- xp$mon + 1L
   res <- lapply(setNames(as.vector(gen, "list"), gen), switch,
                 Year = y,
                 Quarter = getQ(m),
                 FY = getFY(y, m),
                 QFY = getFQ(m),
                 Month = if(as.factor) structure(m, levels = month.name, class = c(if(ordered) "ordered", "factor")) else m, # , "na.included"
-                Day = as.integer(substr(xc, 9L, 10L)),
+                Day = xp$mday,
                 stop("Unknown gen option"))
   vlabels(res) <- lab
   if(keep.date) res <- c(list(Date = `attr<-`(x, "label", "Date")), res)
@@ -281,13 +295,14 @@ expand_date <- function(x, gen = c("Year", "Quarter", "FY", "QFY", "Month"), ori
 #' Coerce Vectors to Dates
 #'
 #' This function coerces date strings i.e. \code{"YYYY-MM-DD"} or \code{"YYYY-MM"}, years e.g. \code{2015} (numeric or character),
-#' year-quarters e.g. \code{"2015Q1"} or \code{"2015-Q1"} fiscal years e.g. \code{"1997/98"} or numeric values representing dates (e.g. from Excel) to a regular R date.
+#' year-quarters e.g. \code{"2015Q1"} or \code{"2015-Q1"} fiscal years e.g. \code{"1997/98"} or numeric values representing dates (e.g. previously imported Excel date) to a regular R date.
 #'
-#' @param x a character date string \code{"YYYY-MM-DD"} or \code{"YYYY-MM"}, year-quarter \code{"YYYYQN"} or \code{"YYYY-QN"} fiscal year \code{"YYYY/YY"} or calendar year \code{YYYY} (numeric or character), or a numeric value corresponding to a date that can be passed to \code{\link{as.Date.numeric}}.
+#' @param x a character date string \code{"YYYY-MM-DD"} or \code{"YYYY-MM"}, year-quarter \code{"YYYYQN"} or \code{"YYYY-QN"} fiscal year \code{"YYYY/YY"} or calendar year \code{YYYY} (numeric or character), or a numeric value corresponding to a date that can be passed to \code{\link[base]{as.Date.numeric}}.
 #' @param end logical. \code{TRUE} replaces missing time information with a period end-date which is the last day of the period. \code{FALSE} replaces missing month and day information with \code{"-01"},
 #' so the year date is the 1st of January, the fiscal year date the 1st of July, and for months / quarters the 1st day of the month / quarter.
-#' @param origin a date or date-string that can be used as reference for converting numeric values to dates. The default corresponds to dates generated in Excel for Windows. See \code{\link{as.Date.numeric}}.
+#' @param origin a date or date-string that can be used as reference for converting numeric values to dates. The default corresponds to dates generated in Excel for Windows. See \code{\link[base]{as.Date.numeric}}.
 #'
+#' @return A \code{\link[base]{Date}} vector.
 #' @examples
 #' make_date("2011-05")
 #' make_date(2011)
@@ -311,7 +326,7 @@ make_date <- function(x, end = FALSE, origin = "1899-12-30") {
                    paste0(substr(x, 1L, 4L), "-07-01")
     } else if(s5 == "Q" || substr(x1, 6L, 6L) == "Q") {
       Q <- as.integer(substr(x, ncx, ncx))
-      x <- if(end) paste0(substr(x, 1L, 4L), "-", Q * 3L, ifelse(Q %% 2L, "-31", "-30")) else
+      x <- if(end) paste0(substr(x, 1L, 4L), "-", Q * 3L, fifelse(as.logical(Q %% 2L), "-31", "-30")) else # fifelse requires logical argument
                    paste0(substr(x, 1L, 4L), "-", Q * 3L - 2L, "-01")
     } else { # Assuming now Year-Month type string
       x <- as.Date(paste0(x, "-01"))
@@ -324,23 +339,28 @@ make_date <- function(x, end = FALSE, origin = "1899-12-30") {
 
 #' Retrieve Data from the Database
 #'
-#' This is the main function of the package to retrieve data from the database. It constructs an SQL query which is sent to the database and returns the data as a \emph{data.table} in R.
+#' This is the main function of the package to retrieve data from the database. It constructs an SQL query which is sent to the database and returns the data as a \code{\link[data.table]{data.table}} in R.
 #'
 #' @param dsid character. (Optional) id's of datasets matching the 'DSID' column of the 'DATASET' table (retrieved using \code{\link[=datasets]{datasets()}}). If none of the following arguments are used, all series from those datasets will be returned.
 #' @param series character. (Optional) codes of series matching the 'Series' column of the 'Series' table (retrieved using \code{\link[=series]{series()}}).
 #' @param from set the start time of the data retrieved by either supplying a start date, a date-string of the form \code{"YYYY-MM-DD"} or \code{"YYYY-MM"},
 #' year-quarters of the form \code{"YYYYQN"} or \code{"YYYY-QN"}, a numeric year \code{YYYY} (numeric or character), or a fiscal year of the form \code{"YYYY/YY"}. These expressions are converted to a regular date by \code{\link{make_date}}.
 #' @param to same as \code{from}: to set the time period until which data is retrieved. For expressions that are not full "YYYY-MM-DD" dates, the last day of the period is chosen.
-#' @param labels logical. \code{TRUE} will also return variable labels along with the series codes.
-#' @param wide logical. \code{TRUE} calls \code{\link{long2wide}} with default settings on the result. \code{FALSE} returns the data in a long format without missing values (suitable for \code{ggplot2}).
+#' @param labels logical. \code{TRUE} will also return labels (series descriptions) along with the series codes.
+#' @param wide logical. \code{TRUE} calls \code{\link{long2wide}} on the result. \code{FALSE} returns the data in a long format without missing values (suitable for \code{ggplot2}).
 #' @param expand.date logical. \code{TRUE} will call \code{\link{expand_date}} on the result.
-#' @param ordered logical. \code{TRUE} orders the result by 'Date' and further by series (if \code{labels = TRUE}), maintaining the column-order of series in the dataset(s).
+#' @param ordered logical. \code{TRUE} orders the result by 'Date' and, if \code{labels = TRUE}, by series, maintaining the column-order of series in the dataset(s).
 #' \code{FALSE} returns the result in a random order, to the benefit of faster query execution.
 #' @param return.query logical. \code{TRUE} will not query the database but instead return the constructed SQL query as a character string.
-#' @param \dots further arguments passed to \code{\link{long2wide}} (if \code{wide = TRUE}) or \code{\link{expand_date}} (if \code{expand.date = TRUE}), no conflicts between the two.
+#' @param \dots further arguments passed to \code{\link{long2wide}} (if \code{wide = TRUE}) or \code{\link{expand_date}} (if \code{expand.date = TRUE}), no conflicts between these two.
 #'
 #' @details If \code{labels = FALSE}, the 'SERIES' table is not joined to the 'DATA' table, and \code{ordered = TRUE} will order datasets and series retrieved in alphabetic order.
 #' If \code{labels = TRUE} data is ordered by series and date within each dataset, preserving the order of columns in the dataset. If multiple datasets are received they are ordered alphabetically according to the 'DSID' column.
+#'
+#' It is possible query multiple series from multiple datasets e.g. \code{get_data(c("DSID1", "DSID2"), c("SERFROM1", "SERFROM2"))} etc., but care needs to be taken that the series queried do not occur in both datasets (see \code{\link{.IDvars}}, and check using \code{\link[=series]{series(c("DSID1", "DSID2"))}}).
+#' Series from datasets at different frequencies can be queried, but, if \code{wide = TRUE}, this will result in missing values for all but the first observations per period in the lower frequency series.
+#'
+#' @return A \code{\link[data.table]{data.table}} with the result of the query.
 #'
 #' @examples \donttest{
 #' # Return monthly macroeconomic indicators from the year 2000 onwards
@@ -355,6 +375,9 @@ make_date <- function(x, end = FALSE, origin = "1899-12-30") {
 #'
 #' # Getting a single series
 #' get_data("BOU_MMI", "M2", 2000)
+#'
+#' # Getting High-Frequency activity indicators from BoU and Revenue & Expense from MoFPED
+#' get_data(c("BOU_MMI", "MOF_TOT", "WB_WDI"), c("CIEA", "BTI", "REV_GRA", "EXP_LEN"))
 #'
 #' # Getting daily interest rates and plotting
 #' library(xts)   # Time series class
@@ -404,8 +427,8 @@ get_data <- function(dsid = NULL, series = NULL, from = NULL, to = NULL,
   query <- if(ordered) paste("SELECT", vars, "FROM", data, "WHERE", cond, "ORDER BY", ord) else
                        paste("SELECT", vars, "FROM", data, "WHERE", cond)
   if(return.query) return(query)
-
-  res <- dbGetQuery(con, query)
+  if(tryCatch(!dbIsValid(.ugatsdb_con), error = function(e) TRUE)) ugatsdb_reconnect()
+  res <- dbGetQuery(.ugatsdb_con, query)
   if(!fnrow(res)) stop("Query resulted in empty dataset. Please make sure that the DSID, series-codes or the date-range supplied in your query are consistent with the available data. See datasets() and series(). Alternatively check your connection to the database.")
   res$Date <- as.Date(res$Date)
   setDT(res)
@@ -426,13 +449,15 @@ get_data <- function(dsid = NULL, series = NULL, from = NULL, to = NULL,
 #'
 #' This function automatically reshapes long (stacked) raw data from the API (\code{\link[=get_data]{get_data(..., wide = FALSE)}}) to a wide format where each variable has its own column.
 #'
-#' @param data raw data from the API: A long format data frame where all values are stacked in the 'Value' column.
+#' @param data raw data from the API: A long format data frame where all values are stacked in a value column.
 #' @param id_cols character. Temporal identifiers of the data. By default all variables in \code{\link{.Tvars}} are selected.
 #' @param names_from character. The column containing the series codes. These will become the names of the new columns in the wider data format.
 #' @param values_from character. The column containing the data values.
 #' @param labels_from character. The column containing the labels describing the series.
 #' @param expand.date logical. \code{TRUE} will call \code{\link{expand_date}} on the data after reshaping.
-#' @param \dots further arguments passed to \code{\link{dcast.data.table}} or \code{\link{expand_date}}, no conflicts between the two.
+#' @param \dots further arguments passed to \code{\link[data.table]{dcast}} or \code{\link{expand_date}}, no conflicts between these two.
+#'
+#' @return A \code{\link[data.table]{data.table}} with the reshaped data.
 #'
 #' @examples \donttest{
 #' # Return monthly macroeconomic indicators from the year 2000 onwards
@@ -443,9 +468,9 @@ get_data <- function(dsid = NULL, series = NULL, from = NULL, to = NULL,
 #' @export long2wide
 #'
 
-long2wide <- function(data, id_cols = .Tvars[.Tvars %in% names(data)], # setdiff(names(data), c("Series", "Label", "Value")),
+long2wide <- function(data, id_cols = intersect(.Tvars, names(data)), # setdiff(names(data), c("Series", "Label", "Value")),
                       names_from = "Series", values_from = "Value",
-                      labels_from = if("Label" %in% names(data)) "Label" else NULL,
+                      labels_from = if(any(names(data) == "Label")) "Label" else NULL,
                       expand.date = FALSE, ...) {
   # Needed for columns to be cast in order...
   if(length(names_from) > 1L) {
@@ -477,12 +502,14 @@ paste_clp <- function(x) if(length(x) == 1L) x else paste(x, collapse = " + ")
 #'
 #' @param data a wide format data frame where all series have their own column.
 #' @param id_cols character. Temporal identifiers of the data. By default all variables in \code{\link{.Tvars}} are selected.
-#' @param to_value character. The names of all variables to be stacked into the long format data frame.
+#' @param to_value character. The names of all series to be stacked into the long format data frame.
 #' @param variable_name character. The name of the variable to store the names of the series.
 #' @param value_name character. The name of the variable to store the data values.
 #' @param label_name character. The name of the variable to store the series labels.
 #' @param na.rm logical. \code{TRUE} will remove all missing values from the long data frame.
-#' @param \dots further arguments passed to \code{\link{melt.data.table}}.
+#' @param \dots further arguments passed to \code{\link[data.table]{melt}}.
+#'
+#' @return A \code{\link[data.table]{data.table}} with the reshaped data.
 #'
 #' @examples \donttest{
 #' # Return monthly macroeconomic indicators from the year 2000 onwards
@@ -494,7 +521,7 @@ paste_clp <- function(x) if(length(x) == 1L) x else paste(x, collapse = " + ")
 #' @export wide2long
 #'
 
-wide2long <- function(data, id_cols = .Tvars[.Tvars %in% names(data)],
+wide2long <- function(data, id_cols = intersect(.Tvars, names(data)),
                       to_value = setdiff(names(data), id_cols),
                       variable_name = "Series", value_name = "Value",
                       label_name = "Label", na.rm = TRUE, ...) {
@@ -520,14 +547,17 @@ wide2long <- function(data, id_cols = .Tvars[.Tvars %in% names(data)],
 #' This function is called by \code{\link{wide2excel}} with option \code{transpose = TRUE} to generate a row-based tabular data format from a wide data frame in R that is suitable for exporting to Excel.
 #'
 #' @param data a wide format data frame where each column is a variable and the first variable uniquely identifies the data.
-#' @param date.format a format for date columns which is passed to \code{\link{format.Date}}. When transposing wide, dates are converted to character. The default R YYYY-MM-DD format for dates is often not recognized by Excel. By default dates are transformed to MM/DD/YYYY format which Excel recognizes. Putting \code{FALSE} here does not transform dates into another format.
+#' @param date.format a format for date columns which is passed to \code{\link[base]{format.Date}}. When transposing wide, dates are converted to character. The default R YYYY-MM-DD format for dates is often not recognized by Excel. By default dates are transformed to DD/MM/YYYY format which Excel (UK English) recognizes. Putting \code{FALSE} here does not transform dates into another format.
+#'
+#' @return A transposed data frame or \code{\link[data.table]{data.table}} (the class of the input is preserved).
+#'
 #' @examples \donttest{
 #' transpose_wide(get_data("BOU_CPI"))
 #' }
-#' @seealso \code{\link{long2wide}}, \code{\link{wide2excel}}, \code{\link{ugatsdb}}
+#' @seealso \code{\link[data.table]{transpose}}, \code{\link{long2wide}}, \code{\link{wide2excel}}, \code{\link{ugatsdb}}
 #' @export transpose_wide
 
-transpose_wide <- function(data, date.format = "%m/%d/%Y") {
+transpose_wide <- function(data, date.format = "%d/%m/%Y") {
   nnum <- cat_vars(data, "logical")[-1L]
   lab <- vlabels(data)[-1L]
 
@@ -549,17 +579,20 @@ transpose_wide <- function(data, date.format = "%m/%d/%Y") {
   }
 
   attr(res, "transposed") <- TRUE
-  if(inherits(data, "data.table")) setDT(res)
+  if(inherits(data, "data.table")) {
+    if(inherits(res, "data.table")) return(qDT(res, keep.attr = TRUE))
+    for(i in 1:2) setDT(res[[i]])
+  }
   return(res)
 }
 
 #' Export Wide Data to Excel
 #'
-#' This function exports a wide format dataset to a column- (default) or row-oriented excel format.
+#' This function exports a wide format dataset to a column- (default) or row-oriented Excel format.
 #'
 #' @param data a wide dataset from \code{\link{get_data}} or reshaped to a wide format with \code{\link{long2wide}}.
-#' @param \dots further arguments to \code{\link{write_xlsx}}. As a minimum a path needs to be supplied that ends with the name of the excel file. See Examples.
-#' @param transpose logical. If \code{TRUE}, the result is returned in a row-oriented excel format. The default is column oriented (same as the dataset in R).
+#' @param \dots further arguments to \code{\link[writexl]{write_xlsx}}. As a minimum a path needs to be supplied that ends with the name of the Excel file. See Examples.
+#' @param transpose logical. If \code{TRUE}, the result is returned in a row-oriented Excel format. The default is column oriented (same as the dataset in R).
 #' @param transpose.date.format argument passed to \code{\link{transpose_wide}}, setting the format of date columns when data is transposed.
 #'
 #' @examples
@@ -567,7 +600,7 @@ transpose_wide <- function(data, date.format = "%m/%d/%Y") {
 #' # Getting macroeconomic indicators from Bank of Uganda in fiscal years
 #' data <- get_data("BOU_MMI_FY", from = "2000/01")
 #'
-#' # Saving to different excel formats
+#' # Saving to different Excel formats
 #' wide2excel(data, "BOU_MMI_FY.xlsx")
 #' wide2excel(data, "BOU_MMI_FY.xlsx", transpose = TRUE)
 #'
@@ -575,12 +608,12 @@ transpose_wide <- function(data, date.format = "%m/%d/%Y") {
 #' wide2excel(data, "C:/Users/.../BOU_MMI_FY.xlsx")
 #' }
 #'
-#' @seealso \code{\link{transpose_wide}}, \code{\link{write_xlsx}}, \code{\link{transpose}}, \code{\link{ugatsdb}}
+#' @seealso \code{\link{transpose_wide}}, \code{\link[writexl]{write_xlsx}}, \code{\link{ugatsdb}}
 #'
 #' @export wide2excel
 #'
 
-wide2excel <- function(data, ..., transpose = FALSE, transpose.date.format = "%m/%d/%Y") {
+wide2excel <- function(data, ..., transpose = FALSE, transpose.date.format = "%d/%m/%Y") {
   ntpl <- !isTRUE(attr(data, "transposed"))
   if(transpose && ntpl) {
     res <- transpose_wide(data, transpose.date.format)

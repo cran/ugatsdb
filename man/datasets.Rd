@@ -9,9 +9,14 @@ datasets(ordered = TRUE)
 \arguments{
 \item{ordered}{logical. \code{TRUE} orders the result in the order data was entered into the database, while \code{FALSE} returns the result in a random order, to the benefit of faster query execution.}
 }
+\value{
+A \code{\link[data.table]{data.table}} with information about the available datasets in the database.
+}
 \description{
-This function pulls a table called 'DATASET' from the database, and returns it as a \emph{data.table} in R.
-The 'DATASET' table gives information about the different datasets read into the database from various sources.
+This function pulls and return a table called 'DATASET' from the database.
+}
+\details{
+The 'DATASET' table gives information about the different datasets read into the database from various sources. It provides a unique id for each dataset, the frequency of data, the minimum and maximum time coverage, when the dataset was last updated, a description, the source (matching the 'Source' column in the 'DATASOURCE' table), and an (optional) url providing direct access to the raw data.
 }
 \examples{
 \donttest{

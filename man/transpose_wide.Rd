@@ -4,12 +4,15 @@
 \alias{transpose_wide}
 \title{Transpose a Wide Dataset to a Row-Based Format}
 \usage{
-transpose_wide(data, date.format = "\%m/\%d/\%Y")
+transpose_wide(data, date.format = "\%d/\%m/\%Y")
 }
 \arguments{
 \item{data}{a wide format data frame where each column is a variable and the first variable uniquely identifies the data.}
 
-\item{date.format}{a format for date columns which is passed to \code{\link{format.Date}}. When transposing wide, dates are converted to character. The default R YYYY-MM-DD format for dates is often not recognized by Excel. By default dates are transformed to MM/DD/YYYY format which Excel recognizes. Putting \code{FALSE} here does not transform dates into another format.}
+\item{date.format}{a format for date columns which is passed to \code{\link[base]{format.Date}}. When transposing wide, dates are converted to character. The default R YYYY-MM-DD format for dates is often not recognized by Excel. By default dates are transformed to DD/MM/YYYY format which Excel (UK English) recognizes. Putting \code{FALSE} here does not transform dates into another format.}
+}
+\value{
+A transposed data frame or \code{\link[data.table]{data.table}} (the class of the input is preserved).
 }
 \description{
 This function is called by \code{\link{wide2excel}} with option \code{transpose = TRUE} to generate a row-based tabular data format from a wide data frame in R that is suitable for exporting to Excel.
@@ -20,5 +23,5 @@ transpose_wide(get_data("BOU_CPI"))
 }
 }
 \seealso{
-\code{\link{long2wide}}, \code{\link{wide2excel}}, \code{\link{ugatsdb}}
+\code{\link[data.table]{transpose}}, \code{\link{long2wide}}, \code{\link{wide2excel}}, \code{\link{ugatsdb}}
 }

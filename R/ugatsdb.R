@@ -1,4 +1,4 @@
-#' ugatsdb: Uganda Time Series Database API
+#' Uganda Time Series Database API
 #'
 #' An R API providing easy access to a relational database with macroeconomic,
 #' financial and development related time series data for Uganda.
@@ -26,7 +26,7 @@
 #' \code{\link[=wide2long]{wide2long()}}\cr
 #' \code{\link[=expand_date]{expand_date()}}
 #'
-#' Function to export reshaped data to Excel
+#' Function to export wide format data to Excel
 #'
 #' \code{\link[=wide2excel]{wide2excel()}}\cr
 #'
@@ -65,11 +65,12 @@
 #'   plot(legend.loc = "topleft")
 #' }
 #' @docType package
-#' @name ugatsdb
+#' @name ugatsdb-package
+#' @aliases ugatsdb
 #'
 #' @importFrom utils packageVersion assignInMyNamespace
 #' @importFrom stats as.formula setNames
-#' @importFrom DBI dbConnect dbGetQuery dbDisconnect
+#' @importFrom DBI dbConnect dbGetQuery dbDisconnect dbIsValid
 #' @importFrom RMySQL MySQL
 #' @importFrom collapse collapv ffirst fmedian funique get_vars get_vars<- date_vars add_vars add_vars<- cat_vars ss qF vlabels vlabels<- ckmatch qDT fnobs fnrow fncol unattrib namlab allNA
 #' @importFrom data.table setDT fifelse melt dcast transpose setcolorder
@@ -79,7 +80,7 @@ NULL
 
 .onLoad <- function(libname, pkgname) {
 
-  assign("con", .connect(), envir = parent.env(environment()))
+  assign(".ugatsdb_con", .connect(), envir = parent.env(environment()))
 
 }
 
@@ -91,14 +92,14 @@ NULL
 
 .onUnload <- function(libpath) {
 
-  if(length(con)) dbDisconnect(con)
+  if(length(.ugatsdb_con)) tryCatch(dbDisconnect(.ugatsdb_con), error = function(e) cat(""))
 
 }
 
 .connect <- function() {
   tryCatch({
 
-    if(isTRUE(options("ugatsdb_localhost")[[1L]])) {
+    if(isTRUE(getOption("ugatsdb_localhost"))) {
       dbConnect(MySQL(), user = 'MEPD_READ_LOCAL', password = 'C76T#pcQ',
                 dbname = 'UGATSDB', host = 'localhost')
     } else {

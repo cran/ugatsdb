@@ -16,11 +16,11 @@ expand_date(
 )
 }
 \arguments{
-\item{x}{either a vector of class 'Date', or coercible to date using \code{\link{as.Date}}, or a data frame / list with a date variable in the first column.}
+\item{x}{either a vector of class 'Date', or coercible to date using \code{\link[base]{as.Date}}, or a data frame / list with a date variable in the first column.}
 
-\item{gen}{character. A vector of identifiers to generate from \code{x}. The possible identifiers are found in \code{\link{.Tvars}}. The default setting is to generate all identifiers apart from 'Day'.}
+\item{gen}{character. A vector of identifiers to generate from \code{x}. The possible identifiers are found in \code{\link{.Tvars}}. The default setting is to generate all identifiers apart from "Day".}
 
-\item{origin}{character / Date. Passed to \code{\link{as.Date}}: for converting numeric \code{x} to date.}
+\item{origin}{character / Date. Passed to \code{\link[base]{as.Date}}: for converting numeric \code{x} to date.}
 
 \item{keep.date}{logical. \code{TRUE} will keep the date variable in the first column of the resulting dataset, \code{FALSE} will remove the date variable in favor of the generated identifiers.}
 
@@ -32,6 +32,9 @@ expand_date(
 \code{FALSE} will generate fiscal years as character and quarters and months as integer variables.}
 
 \item{\dots}{not used.}
+}
+\value{
+A \code{\link[data.table]{data.table}} containing the computed identifiers as columns. See Examples.
 }
 \description{
 This function expands a date column and generates additional temporal identifiers from it (such as the year, month, quarter, fiscal year etc.).

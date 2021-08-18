@@ -6,7 +6,7 @@
 \usage{
 wide2long(
   data,
-  id_cols = .Tvars[.Tvars \%in\% names(data)],
+  id_cols = intersect(.Tvars, names(data)),
   to_value = setdiff(names(data), id_cols),
   variable_name = "Series",
   value_name = "Value",
@@ -20,7 +20,7 @@ wide2long(
 
 \item{id_cols}{character. Temporal identifiers of the data. By default all variables in \code{\link{.Tvars}} are selected.}
 
-\item{to_value}{character. The names of all variables to be stacked into the long format data frame.}
+\item{to_value}{character. The names of all series to be stacked into the long format data frame.}
 
 \item{variable_name}{character. The name of the variable to store the names of the series.}
 
@@ -30,7 +30,10 @@ wide2long(
 
 \item{na.rm}{logical. \code{TRUE} will remove all missing values from the long data frame.}
 
-\item{\dots}{further arguments passed to \code{\link{melt.data.table}}.}
+\item{\dots}{further arguments passed to \code{\link[data.table]{melt}}.}
+}
+\value{
+A \code{\link[data.table]{data.table}} with the reshaped data.
 }
 \description{
 This function automatically reshapes wide (column-based) data into a long format akin to the format of the raw data coming from the database (\code{\link[=get_data]{get_data(..., wide = FALSE)}}).
