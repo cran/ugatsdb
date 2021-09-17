@@ -1,3 +1,7 @@
+# ugatsdb 0.2.1
+- Safer queries under unstable internet connections: each query is evaluated inside `tryCatch`, and, if it fails, 
+`ugatsdb_reconnect` is called and the query is sent again. 
+
 # ugatsdb 0.2.0
 - Significant speed improvement to the `expand_date` function.
 

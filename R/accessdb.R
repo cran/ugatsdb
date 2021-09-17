@@ -34,7 +34,9 @@
 #' Reconnect to Database
 #'
 #' This function terminates an existing connection to the database server and attempts to reconnect to it.
-#' It is a useful function to include at the beginning of codes that should work regardless of whether the package was loaded recently or the internet connection is stable.
+#' It is now somewhat redundant by the safe query mechanism introduced in v0.2.1 of the package, where each query is evaluated inside
+#' \code{\link{tryCatch}} and the database connection is renewed if the query fails. This function can still be used to manually
+#' renew the database connection.
 #' @examples \donttest{
 #' ugatsdb_reconnect()
 #' }
@@ -46,6 +48,8 @@ ugatsdb_reconnect <- function() {
   if(length(.ugatsdb_con)) tryCatch(dbDisconnect(.ugatsdb_con), error = function(e) cat(""))
   assignInMyNamespace(".ugatsdb_con", .connect())
 }
+
+safe_query <- function(query) tryCatch(dbGetQuery(.ugatsdb_con, query), error = function(e) {ugatsdb_reconnect(); dbGetQuery(.ugatsdb_con, query)})
 
 #' Retrieve Data Sources Table
 #'
@@ -63,8 +67,9 @@ ugatsdb_reconnect <- function() {
 
 datasources <- function(ordered = TRUE) {
   query <- "SELECT Source, Source_Url, NDatasets, Description, Access FROM DATASOURCE"
-  if(tryCatch(!dbIsValid(.ugatsdb_con), error = function(e) TRUE)) ugatsdb_reconnect()
-  res <- dbGetQuery(.ugatsdb_con, if(ordered) paste(query, "ORDER BY SRC_Order") else query)
+  if(ordered) query <- paste(query, "ORDER BY SRC_Order")
+  # if(tryCatch(!dbIsValid(.ugatsdb_con), error = function(e) TRUE)) ugatsdb_reconnect()
+  res <- safe_query(query)
   if(!fnrow(res)) stop("Query resulted in empty dataset. This means something is wrong with your internet connection, the connection to the database (try calling ugatsdb_reconnect()) or with the database itself.")
   setDT(res)
   # oldClass(res) <- c("data.table", "data.frame")
@@ -87,8 +92,9 @@ datasources <- function(ordered = TRUE) {
 
 datasets <- function(ordered = TRUE) {
   query <- "SELECT DSID, Dataset, Frequency, DS_From, DS_To, Updated, Description, Source, DS_Url FROM DATASET"
-  if(tryCatch(!dbIsValid(.ugatsdb_con), error = function(e) TRUE)) ugatsdb_reconnect()
-  res <- dbGetQuery(.ugatsdb_con, if(ordered) paste(query, "ORDER BY DS_Order") else query)
+  if(ordered) query <- paste(query, "ORDER BY DS_Order")
+  # if(tryCatch(!dbIsValid(.ugatsdb_con), error = function(e) TRUE)) ugatsdb_reconnect()
+  res <- safe_query(query)
   if(!fnrow(res)) stop("Query resulted in empty dataset. This means something is wrong with your internet connection, the connection to the database (try calling ugatsdb_reconnect()) or with the database itself.")
   res$DS_From <- as.Date(res$DS_From)
   res$DS_To <- as.Date(res$DS_To)
@@ -151,8 +157,8 @@ series <- function(dsid = NULL, dataset.info = TRUE, ordered = TRUE, return.quer
     }
   }
   if(return.query) return(query)
-  if(tryCatch(!dbIsValid(.ugatsdb_con), error = function(e) TRUE)) ugatsdb_reconnect()
-  res <- dbGetQuery(.ugatsdb_con, query)
+  # if(tryCatch(!dbIsValid(.ugatsdb_con), error = function(e) TRUE)) ugatsdb_reconnect()
+  res <- safe_query(query)
   if(!fnrow(res)) stop("Query resulted in empty dataset. Please make sure the DSID esists by checking against the datasets() table. Alternatively check your connection to the database.")
 
   res$S_From <- as.Date(res$S_From)
@@ -182,7 +188,7 @@ series <- function(dsid = NULL, dataset.info = TRUE, ordered = TRUE, return.quer
 # #' @export times
 #
 # times <- function(as.factor = TRUE, ordered = TRUE) {
-#   res <- dbGetQuery(.ugatsdb_con, if(ordered) "SELECT * FROM TIME ORDER BY Date" else "SELECT * FROM TIME")
+#   res <- safe_query(if(ordered) "SELECT * FROM TIME ORDER BY Date" else "SELECT * FROM TIME")
 #   oldClass(res) <- c("data.table", "data.frame")
 #   lab <- c('Date', 'Year', 'Quarter', 'Fiscal Year (July - June)', 'Quarter of Fiscal Year', 'Month', 'Day')
 #   res$Date <- as.Date(res$Date)
@@ -427,8 +433,8 @@ get_data <- function(dsid = NULL, series = NULL, from = NULL, to = NULL,
   query <- if(ordered) paste("SELECT", vars, "FROM", data, "WHERE", cond, "ORDER BY", ord) else
                        paste("SELECT", vars, "FROM", data, "WHERE", cond)
   if(return.query) return(query)
-  if(tryCatch(!dbIsValid(.ugatsdb_con), error = function(e) TRUE)) ugatsdb_reconnect()
-  res <- dbGetQuery(.ugatsdb_con, query)
+  # if(tryCatch(!dbIsValid(.ugatsdb_con), error = function(e) TRUE)) ugatsdb_reconnect()
+  res <- safe_query(query)
   if(!fnrow(res)) stop("Query resulted in empty dataset. Please make sure that the DSID, series-codes or the date-range supplied in your query are consistent with the available data. See datasets() and series(). Alternatively check your connection to the database.")
   res$Date <- as.Date(res$Date)
   setDT(res)

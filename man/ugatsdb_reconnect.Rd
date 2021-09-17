@@ -8,7 +8,9 @@ ugatsdb_reconnect()
 }
 \description{
 This function terminates an existing connection to the database server and attempts to reconnect to it.
-It is a useful function to include at the beginning of codes that should work regardless of whether the package was loaded recently or the internet connection is stable.
+It is now somewhat redundant by the safe query mechanism introduced in v0.2.1 of the package, where each query is evaluated inside
+\code{\link{tryCatch}} and the database connection is renewed if the query fails. This function can still be used to manually
+renew the database connection.
 }
 \examples{
 \donttest{

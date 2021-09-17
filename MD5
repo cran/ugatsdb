@@ -1,7 +1,7 @@
-7cb8076d849d9314a0d594ab5b6f19f9 *DESCRIPTION
+a7f56dfcf6563b19a7321257ebbd6c51 *DESCRIPTION
 c9c4f6d6d0f9356ef80b9343df6a5e48 *NAMESPACE
-728948096fee875f64986aebc20f294d *NEWS.md
-edaae76ae2a2ee33629bd10faa4829f6 *R/accessdb.R
+bc29fdae6fa780b9428b9020d6947846 *NEWS.md
+c411a06f134d69bda8c6003e6b499492 *R/accessdb.R
 d87b88e0cd7b60f9448333abe880f0ad *R/ugatsdb.R
 4d553bd3c114524ba43356cf6e6d9fc4 *man/datasets.Rd
 36545ab1d6fd1f4b3f4cb7c88a46c007 *man/datasources.Rd
@@ -13,6 +13,6 @@ d87b88e0cd7b60f9448333abe880f0ad *R/ugatsdb.R
 4a8a5588e77b3db3effa86f71db5d987 *man/series.Rd
 28ebde89385a6bdc8b8bd931325ce046 *man/transpose_wide.Rd
 44555fdc3ad21fb33995cfe973b6b5a2 *man/ugatsdb-package.Rd
-e3215a157b0be69d628079b85e75f19e *man/ugatsdb_reconnect.Rd
+383cc6e39af623cdce8657ee3a740e88 *man/ugatsdb_reconnect.Rd
 3dc016bc9224007c40e6391f5b39331a *man/wide2excel.Rd
 b833c53a4ddca4ae7d919442130d1807 *man/wide2long.Rd
