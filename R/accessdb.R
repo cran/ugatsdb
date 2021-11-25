@@ -49,7 +49,12 @@ ugatsdb_reconnect <- function() {
   assignInMyNamespace(".ugatsdb_con", .connect())
 }
 
-safe_query <- function(query) tryCatch(dbGetQuery(.ugatsdb_con, query), error = function(e) {ugatsdb_reconnect(); dbGetQuery(.ugatsdb_con, query)})
+.ugatsdb_con <- NULL # Needed for initialization
+
+safe_query <- function(query) {
+  if(is.null(.ugatsdb_con)) ugatsdb_reconnect() # Initial connection
+  tryCatch(dbGetQuery(.ugatsdb_con, query), error = function(e) {ugatsdb_reconnect(); dbGetQuery(.ugatsdb_con, query)})
+}
 
 #' Retrieve Data Sources Table
 #'
@@ -301,9 +306,9 @@ expand_date <- function(x, gen = c("Year", "Quarter", "FY", "QFY", "Month"), ori
 #' Coerce Vectors to Dates
 #'
 #' This function coerces date strings i.e. \code{"YYYY-MM-DD"} or \code{"YYYY-MM"}, years e.g. \code{2015} (numeric or character),
-#' year-quarters e.g. \code{"2015Q1"} or \code{"2015-Q1"} fiscal years e.g. \code{"1997/98"} or numeric values representing dates (e.g. previously imported Excel date) to a regular R date.
+#' year-quarters e.g. \code{"2015Q1"} or \code{"2015-Q1"}, year-months e.g. \code{"2015M01"} or \code{"2015-M01"}, fiscal years e.g. \code{"1997/98"} or numeric values representing dates (e.g. previously imported Excel date) to a regular R date.
 #'
-#' @param x a character date string \code{"YYYY-MM-DD"} or \code{"YYYY-MM"}, year-quarter \code{"YYYYQN"} or \code{"YYYY-QN"} fiscal year \code{"YYYY/YY"} or calendar year \code{YYYY} (numeric or character), or a numeric value corresponding to a date that can be passed to \code{\link[base]{as.Date.numeric}}.
+#' @param x a character date string \code{"YYYY-MM-DD"} or \code{"YYYY-MM"}, year-quarter \code{"YYYYQN"} or \code{"YYYY-QN"}, , year-month \code{"YYYYMNN"} or \code{"YYYY-MNN"}, fiscal year \code{"YYYY/YY"} or calendar year \code{YYYY} (numeric or character), or a numeric value corresponding to a date that can be passed to \code{\link[base]{as.Date.numeric}}.
 #' @param end logical. \code{TRUE} replaces missing time information with a period end-date which is the last day of the period. \code{FALSE} replaces missing month and day information with \code{"-01"},
 #' so the year date is the 1st of January, the fiscal year date the 1st of July, and for months / quarters the 1st day of the month / quarter.
 #' @param origin a date or date-string that can be used as reference for converting numeric values to dates. The default corresponds to dates generated in Excel for Windows. See \code{\link[base]{as.Date.numeric}}.
@@ -325,7 +330,7 @@ make_date <- function(x, end = FALSE, origin = "1899-12-30") {
   ncx <- nchar(x1)
   if(ncx == 4L) return(as.Date(paste0(x, if(end) "-12-31" else "-01-01")))
   if(is.numeric(x)) return(as.Date.numeric(x, origin))
-  if(ncx == 6L | ncx == 7L) { # could be "1999/1"
+  if(ncx >= 6L || ncx <= 8L) { # could be "1999/1"
     s5 <- substr(x1, 5L, 5L)
     if(s5 == "/") {
       x <- if(end) paste0(as.integer(substr(x, 1L, 4L)) + 1L, "-06-30") else
@@ -334,8 +339,14 @@ make_date <- function(x, end = FALSE, origin = "1899-12-30") {
       Q <- as.integer(substr(x, ncx, ncx))
       x <- if(end) paste0(substr(x, 1L, 4L), "-", Q * 3L, fifelse(as.logical(Q %% 2L), "-31", "-30")) else # fifelse requires logical argument
                    paste0(substr(x, 1L, 4L), "-", Q * 3L - 2L, "-01")
-    } else { # Assuming now Year-Month type string
-      x <- as.Date(paste0(x, "-01"))
+    } else {
+      if(s5 == "M" || substr(x1, 6L, 6L) == "M") {
+        st <- if(s5 == "M") 6L else 7L
+        M <- substr(x, st, st + 1L)
+        x <- paste0(substr(x, 1L, 4L), "-", M, "-01")
+      } else { # Assuming now Year-Month type string
+        x <- as.Date(if(ncx == 8L) x else paste0(x, "-01"))
+      }
       if(end) x <- as.Date(format(x + 31L, "%Y-%m-01")) - 1L
     }
   }

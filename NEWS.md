@@ -1,3 +1,8 @@
+# ugatsdb 0.2.2
+- A connection to the database is only established when specific functions are called that require a database connection. 
+
+- `make_date` can now also convert year-month strings of the form 'YYYYMNN' or 'YYYY-MNN' to R Date's. 
+
 # ugatsdb 0.2.1
 - Safer queries under unstable internet connections: each query is evaluated inside `tryCatch`, and, if it fails, 
 `ugatsdb_reconnect` is called and the query is sent again. 

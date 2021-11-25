@@ -78,13 +78,15 @@
 #'
 NULL
 
-.onLoad <- function(libname, pkgname) {
-
-  assign(".ugatsdb_con", .connect(), envir = parent.env(environment()))
-
-}
+# .onLoad <- function(libname, pkgname) {
+#
+#   assign(".ugatsdb_con", .connect(), envir = parent.env(environment()))
+#
+# }
 
 .onAttach <- function(libname, pkgname) {
+
+  # assign(".ugatsdb_con", .connect(), envir = parent.env(environment()))
 
   packageStartupMessage(paste0("ugatsdb ", packageVersion("ugatsdb"), ", see help(ugatsdb)"))
 
@@ -108,7 +110,7 @@ NULL
     }
 
   }, error = function(e) {
-    message("Could not not connect to database. Please make sure your internet connection is working, and your firewall does not block remote IP connections.")
+    message("Could not connect to database. Please make sure your internet connection is working, and your firewall does not block remote IP connections.")
     NULL})
 }
 
