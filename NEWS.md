@@ -1,3 +1,8 @@
+# ugatsdb 0.2.3
+- Package functions fail gracefully in case database is offline.
+
+- Performance improvements to `long2wide`. 
+
 # ugatsdb 0.2.2
 - A connection to the database is only established when specific functions are called that require a database connection. 
 

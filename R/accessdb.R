@@ -53,7 +53,10 @@ ugatsdb_reconnect <- function() {
 
 safe_query <- function(query) {
   if(is.null(.ugatsdb_con)) ugatsdb_reconnect() # Initial connection
-  tryCatch(dbGetQuery(.ugatsdb_con, query), error = function(e) {ugatsdb_reconnect(); dbGetQuery(.ugatsdb_con, query)})
+  tryCatch(dbGetQuery(.ugatsdb_con, query), error = function(e) {
+    ugatsdb_reconnect()
+    tryCatch(dbGetQuery(.ugatsdb_con, query), error = function(e) NULL)
+  })
 }
 
 #' Retrieve Data Sources Table
@@ -75,7 +78,10 @@ datasources <- function(ordered = TRUE) {
   if(ordered) query <- paste(query, "ORDER BY SRC_Order")
   # if(tryCatch(!dbIsValid(.ugatsdb_con), error = function(e) TRUE)) ugatsdb_reconnect()
   res <- safe_query(query)
-  if(!fnrow(res)) stop("Query resulted in empty dataset. This means something is wrong with your internet connection, the connection to the database (try calling ugatsdb_reconnect()) or with the database itself.")
+  if(is.null(res) || !fnrow(res)) {
+    message("Query resulted in empty dataset. This means something is wrong with your internet connection, the connection to the database (try calling ugatsdb_reconnect()) or with the database itself.")
+    return(res)
+  }
   setDT(res)
   # oldClass(res) <- c("data.table", "data.frame")
   return(res)
@@ -100,7 +106,10 @@ datasets <- function(ordered = TRUE) {
   if(ordered) query <- paste(query, "ORDER BY DS_Order")
   # if(tryCatch(!dbIsValid(.ugatsdb_con), error = function(e) TRUE)) ugatsdb_reconnect()
   res <- safe_query(query)
-  if(!fnrow(res)) stop("Query resulted in empty dataset. This means something is wrong with your internet connection, the connection to the database (try calling ugatsdb_reconnect()) or with the database itself.")
+  if(is.null(res) || !fnrow(res)) {
+    message("Query resulted in empty dataset. This means something is wrong with your internet connection, the connection to the database (try calling ugatsdb_reconnect()) or with the database itself.")
+    return(res)
+  }
   res$DS_From <- as.Date(res$DS_From)
   res$DS_To <- as.Date(res$DS_To)
   res$Updated <- as.Date(res$Updated)
@@ -164,8 +173,10 @@ series <- function(dsid = NULL, dataset.info = TRUE, ordered = TRUE, return.quer
   if(return.query) return(query)
   # if(tryCatch(!dbIsValid(.ugatsdb_con), error = function(e) TRUE)) ugatsdb_reconnect()
   res <- safe_query(query)
-  if(!fnrow(res)) stop("Query resulted in empty dataset. Please make sure the DSID esists by checking against the datasets() table. Alternatively check your connection to the database.")
-
+  if(is.null(res) || !fnrow(res)) {
+    message("Query resulted in empty dataset. Please make sure the DSID esists by checking against the datasets() table. Alternatively check your connection to the database.")
+    return(res)
+  }
   res$S_From <- as.Date(res$S_From)
   res$S_To <- as.Date(res$S_To)
   if(dataset.info) res$Updated <- as.Date(res$Updated)
@@ -446,7 +457,10 @@ get_data <- function(dsid = NULL, series = NULL, from = NULL, to = NULL,
   if(return.query) return(query)
   # if(tryCatch(!dbIsValid(.ugatsdb_con), error = function(e) TRUE)) ugatsdb_reconnect()
   res <- safe_query(query)
-  if(!fnrow(res)) stop("Query resulted in empty dataset. Please make sure that the DSID, series-codes or the date-range supplied in your query are consistent with the available data. See datasets() and series(). Alternatively check your connection to the database.")
+  if(is.null(res) || !fnrow(res)) {
+    message("Query resulted in empty dataset. Please make sure that the DSID, series-codes or the date-range supplied in your query are consistent with the available data. See datasets() and series(). Alternatively check your connection to the database.")
+    return(res)
+  }
   res$Date <- as.Date(res$Date)
   setDT(res)
   # oldClass(res) <- c("data.table", "data.frame")
@@ -490,21 +504,18 @@ long2wide <- function(data, id_cols = intersect(.Tvars, names(data)), # setdiff(
                       labels_from = if(any(names(data) == "Label")) "Label" else NULL,
                       expand.date = FALSE, ...) {
   # Needed for columns to be cast in order...
-  if(length(names_from) > 1L) {
-    data[, names_from] <- lapply(.subset(data, names_from), function(x) factor(x, levels = funique(x, method = "hash")))
-  } else {
-    data[[names_from]] <- factor(.subset2(data, names_from), levels = funique(.subset2(data, names_from), method = "hash"))
-  }
-  if(anyDuplicated(get_vars(data, c(names_from, id_cols))))
-    data <- collapv(data, c(names_from, id_cols), fmedian, ffirst, sort = FALSE, na.rm = FALSE)
+  data <- ftransformv(data, names_from, qF, sort = FALSE)
+  # if(fnunique(get_vars(data, c(names_from, id_cols))) != fnrow(data))
+  #  data <- collapv(data, c(names_from, id_cols), fmedian, ffirst, sort = FALSE, na.rm = FALSE)
   form <- as.formula(paste0(paste_clp(id_cols), " ~ ", paste_clp(names_from)))
-  res <- dcast(qDT(data), form, value.var = values_from, fill = NA, ...) # , fun.aggregate = median, na.rm = TRUE
+  res <- dcast(qDT(data), form, value.var = values_from, sep = "_", ...) # , fun.aggregate = median, na.rm = TRUE
   if(length(labels_from)) {
     noid <- -seq_along(id_cols)
     namlab <- funique(.subset(data, c(names_from, labels_from)))
     nam <- if(length(names_from) == 1L) namlab[[1L]] else
       do.call(paste, c(namlab[names_from], list(sep = "_"))) # make sure sep is same as dcast...
-    vlabels(res)[noid] <- namlab[[labels_from]][ckmatch(names(res)[noid], nam)]
+    lab <- namlab[[labels_from]][ckmatch(names(res)[noid], nam)]
+    vlabels(res)[noid] <- if(is.character(lab)) lab else as.character(lab)
   }
   if(expand.date) return(expand_date(res, ...)) else return(res)
 }

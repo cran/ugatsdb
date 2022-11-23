@@ -72,7 +72,7 @@
 #' @importFrom stats as.formula setNames
 #' @importFrom DBI dbConnect dbGetQuery dbDisconnect dbIsValid
 #' @importFrom RMySQL MySQL
-#' @importFrom collapse collapv ffirst fmedian funique get_vars get_vars<- date_vars add_vars add_vars<- cat_vars ss qF vlabels vlabels<- ckmatch qDT fnobs fnrow fncol unattrib namlab allNA
+#' @importFrom collapse collapv ffirst fmedian funique ftransformv get_vars get_vars<- date_vars add_vars add_vars<- cat_vars ss qF vlabels vlabels<- ckmatch qDT fnobs fnrow fncol unattrib namlab allNA
 #' @importFrom data.table setDT fifelse melt dcast transpose setcolorder
 #' @importFrom writexl write_xlsx
 #'
